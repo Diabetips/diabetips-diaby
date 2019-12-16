@@ -1,3 +1,3 @@
 # Diaby
 
-Artificial intelligence that predict insuline quntities
+Artificial intelligence that predict insulines quantities
