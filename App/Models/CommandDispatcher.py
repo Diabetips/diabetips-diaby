@@ -46,11 +46,12 @@ class CommandDispatcher(object):
     def evaluate(self, id):
         user = self.get_user(id).json()
         try:
-            model = self.modelManager.load_model(user)
+            model, insulin = self.modelManager.load_model(user)
         except:
             raise Exception("Error while loading the model")
-        return self.modelManager.evaluate_model(model, user)
-
+        res = self.modelManager.evaluate_model(model, user)
+        res.append(insulin)
+        return res
 
 def main():
     cd = CommandDispatcher()

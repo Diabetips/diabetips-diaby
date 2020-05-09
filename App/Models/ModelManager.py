@@ -3,8 +3,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Install TensorFlow
 import json
 import os
+import random
 
 import tensorflow as tf
+from tensorflow.contrib import lite
 
 
 class ModelManager(object):
@@ -48,23 +50,30 @@ class ModelManager(object):
         with open(dir + '/data.json', 'w+') as outfile:
             userData.update(
                 {
-                    'slow_insuline' : [],
+                    'slow_insuline': [],
                     'rapid_insuline': [],
                     'hbA1cs': [],
                     'length': 0,
                     'weight': 0,
                     'sport_activities': [],
-                    'meals': []
+                    'meals': [],
+                    'insulin': random.randint(7, 11)
                 }
             )
             json.dump(userData, outfile)
+            converter = lite.TFLiteConverter.from_keras_model_file(dir + '/model.h5')
+            tfmodel = converter.convert()
+            open(dir + "/model.tflite", "wb").write(tfmodel)
+            return userData
 
     def train_model(self, model, userData):
         model.fit(self.train_images, self.train_labels, epochs=5)
         model.summary()
 
     def load_model(self, userData):
-        return tf.keras.models.load_model(self.usersDirectory + "/" + userData['uid'] + '/model.h5')
+        with open(self.usersDirectory + "/" + userData['uid'] + '/data.json', 'r') as myfile:
+            data = myfile.read()
+        return tf.keras.models.load_model(self.usersDirectory + "/" + userData['uid'] + '/model.h5'), json.loads(data)['insulin']
 
     def evaluate_model(self, model, userData):
         return model.evaluate(self.test_images,  self.test_labels, verbose=2, steps=10)

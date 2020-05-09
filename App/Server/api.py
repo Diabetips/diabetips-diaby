@@ -29,12 +29,12 @@ class Build(Resource):
 
 class Evaluate(Resource):
     def get(self, user_id):
-        loss, acc = 0, 0
+        loss, acc, insulin = 0, 0, 0
         try:
-            loss, acc = cd.evaluate(user_id)
+            loss, acc, insulin = cd.evaluate(user_id)
         except:
             flask.abort(400, "An error occured during the evaluate")
-        return {'message': 'Successfuly evaluate the model', 'loss': str(loss), 'accuracy': str(acc)}
+        return {'message': 'Successfuly evaluate the model', 'loss': str(loss), 'accuracy': str(acc), 'result': insulin}
 
 
 class Predict(Resource):
