@@ -1,4 +1,4 @@
-from pip._vendor import requests
+import requests
 
 baseUrl = "https://api.diabetips.fr/v1"
 usersUrl = baseUrl + "/users"
