@@ -13,7 +13,7 @@ class CommandDispatcher(object):
         return
 
     def get_user(self, id):
-        user = self.apiService.GetUser(id)
+        user = self.apiService.user.get(id)
         if user.status_code != 200:
             raise Exception("Unknown user")
         return user
