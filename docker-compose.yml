@@ -4,7 +4,7 @@ services:
     build: .
     image: diabetips-diaby
     command: .local/bin/uwsgi --socket 0.0.0.0:3031 --wsgi-file App/Server/api.py --callable app --master --processes 4
-    networks:
-      default:
-        external:
-          name: diabetips
+networks:
+  default:
+    external:
+      name: diabetips
