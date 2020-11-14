@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pip._vendor import requests
 
-from App.ApiService.Pagination import Pagination
+from App.ClientDiabetipsApi.Pagination import Pagination
 
 
 class BaseServiceDiabetipsApi:

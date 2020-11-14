@@ -1,15 +1,16 @@
 import argparse
 import os
 
-from App.ApiService.Users import ServiceDiabetipsApi
-from App.Models.ModelManager import ModelManager
+from App.ClientDiabetipsApi.ApiService import ServiceDiabetipsApi
+from App.IA.BasicModel import BasicModel
+from App.IA.TensorModel import TensorModel
 
 
 class CommandDispatcher(object):
-    modelManager = ModelManager()
     apiService = ServiceDiabetipsApi()
 
-    def __init__(self):
+    def __init__(self, model):
+        self.modelManager = model
         return
 
     def get_user(self, id):
@@ -53,21 +54,24 @@ class CommandDispatcher(object):
         res.append(insulin)
         return res
 
+
 def main():
-    cd = CommandDispatcher()
     parser = argparse.ArgumentParser(description='Manage user models')
-    parser.add_argument('--build', dest='build', action='store_const', default=None, const=cd.build)
-    parser.add_argument('--train', dest='train', action='store_const', default=None, const=cd.train)
-    parser.add_argument('--evaluate', dest='evaluate', action='store_const', default=None, const=cd.evaluate)
+    parser.add_argument('--model_type', dest='model', action='store_const', default="Basic")
     parser.add_argument('--uuid', type=str, help='Uuid of the user to treat', required=True)
 
+    parser.add_argument('--build', dest='build', action='store_const', default=None)
+    parser.add_argument('--train', dest='train', action='store_const', default=None)
+    parser.add_argument('--evaluate', dest='evaluate', action='store_const', default=None)
+
     args = parser.parse_args()
+    cd = CommandDispatcher(TensorModel() if args.model == "Tensor" else BasicModel())
     if args.build:
-        args.build(args.uuid)
+        cd.build(args.uuid)
     if args.train:
-        args.train(args.uuid)
+        cd.train(args.uuid)
     if args.evaluate:
-        args.evaluate(args.uuid)
+        cd.evaluate(args.uuid)
 
 
 if __name__ == "__main__":
