@@ -19,5 +19,5 @@ class AModel(object):
     def load_model(self, userData):
         return None
 
-    def evaluate_model(self, model, user_data):
+    def evaluate_model(self, model, user_data, max_date):
         return None

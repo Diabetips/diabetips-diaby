@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 class Pagination:
     def __init__(self,
                  size,
@@ -18,6 +21,9 @@ class Pagination:
         self.start = start
         self.end = end
         self.updated = False
+        self.format = "%Y-%m-%dT%H:%M:%S.000Z"
+
+
 
     def reset(self):
         self.current = self.default
@@ -41,8 +47,11 @@ class Pagination:
     def getRequestParameters(self):
         self.updated = True
         if self.periodEnable:
-            return f"page={self.current}&size={self.size}&start={int(self.start)}&end={int(self.end)}"
+            return f"page={self.current}&size={self.size}&start={self.formatDate(self.start)}&end={self.formatDate(self.end)}"
         return f"page={self.current}&size={self.size}"
+
+    def formatDate(self, date):
+        return datetime.utcfromtimestamp(date).strftime(self.format)
 
     def setInterval(self, start, end):
         self.start = start
