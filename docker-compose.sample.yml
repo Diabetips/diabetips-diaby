@@ -2,6 +2,7 @@ version: "3"
 services:
   diabetips-diaby:
     container_name: diabetips-diaby.sample
+    env_file: env.sample.txt
     networks:
       default:
         ipv4_address: 0.0.0.0
