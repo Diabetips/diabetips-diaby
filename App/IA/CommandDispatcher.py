@@ -1,19 +1,21 @@
 import argparse
 import os
 
-from App.ApiService.Users import ServiceDiabetipsApi
-from App.Models.ModelManager import ModelManager
+from App.ClientDiabetipsApi.ApiService import ServiceDiabetipsApi
+from App.Error.InternalError import InternalError
+from App.IA.BasicModel import BasicModel
+from App.IA.TensorModel import TensorModel
 
 
 class CommandDispatcher(object):
-    modelManager = ModelManager()
     apiService = ServiceDiabetipsApi()
 
-    def __init__(self):
+    def __init__(self, model):
+        self.modelManager = model
         return
 
     def get_user(self, id):
-        user = self.apiService.GetUser(id)
+        user = self.apiService.user.get(id)
         if user.status_code != 200:
             raise Exception("Unknown user")
         return user
@@ -35,11 +37,11 @@ class CommandDispatcher(object):
         try:
             model = self.modelManager.load_model(user)
         except:
-            raise Exception("Error while loading the model")
+            raise InternalError("Error while loading the model", status_code=500)
         try:
             self.modelManager.train_model(model, user)
         except:
-            raise Exception("Error while Training the model")
+            raise InternalError("Error while Training the model", status_code=500)
         self.modelManager.save_model(model, user)
         return
 
@@ -48,26 +50,29 @@ class CommandDispatcher(object):
         try:
             model, insulin = self.modelManager.load_model(user)
         except:
-            raise Exception("Error while loading the model")
+            raise InternalError("Error while loading the model", status_code=500)
         res = self.modelManager.evaluate_model(model, user)
         res.append(insulin)
         return res
 
+
 def main():
-    cd = CommandDispatcher()
     parser = argparse.ArgumentParser(description='Manage user models')
-    parser.add_argument('--build', dest='build', action='store_const', default=None, const=cd.build)
-    parser.add_argument('--train', dest='train', action='store_const', default=None, const=cd.train)
-    parser.add_argument('--evaluate', dest='evaluate', action='store_const', default=None, const=cd.evaluate)
+    parser.add_argument('--model_type', dest='model', action='store_const', default="Basic")
     parser.add_argument('--uuid', type=str, help='Uuid of the user to treat', required=True)
 
+    parser.add_argument('--build', dest='build', action='store_const', default=None)
+    parser.add_argument('--train', dest='train', action='store_const', default=None)
+    parser.add_argument('--evaluate', dest='evaluate', action='store_const', default=None)
+
     args = parser.parse_args()
+    cd = CommandDispatcher(TensorModel() if args.model == "Tensor" else BasicModel())
     if args.build:
-        args.build(args.uuid)
+        cd.build(args.uuid)
     if args.train:
-        args.train(args.uuid)
+        cd.train(args.uuid)
     if args.evaluate:
-        args.evaluate(args.uuid)
+        cd.evaluate(args.uuid)
 
 
 if __name__ == "__main__":
