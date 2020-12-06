@@ -1,6 +1,7 @@
 version: "3"
 services:
   diabetips-diaby:
+    image: docker.pkg.github.com/diabetips/diabetips-diaby/diaby:sample
     container_name: diabetips-diaby.sample
     env_file: env.sample.txt
     networks:
