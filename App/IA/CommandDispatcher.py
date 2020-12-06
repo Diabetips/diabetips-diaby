@@ -2,6 +2,7 @@ import argparse
 import os
 
 from App.ClientDiabetipsApi.ApiService import ServiceDiabetipsApi
+from App.Error.InternalError import InternalError
 from App.IA.BasicModel import BasicModel
 from App.IA.TensorModel import TensorModel
 
@@ -36,11 +37,11 @@ class CommandDispatcher(object):
         try:
             model = self.modelManager.load_model(user)
         except:
-            raise Exception("Error while loading the model")
+            raise InternalError("Error while loading the model", status_code=500)
         try:
             self.modelManager.train_model(model, user)
         except:
-            raise Exception("Error while Training the model")
+            raise InternalError("Error while Training the model", status_code=500)
         self.modelManager.save_model(model, user)
         return
 
@@ -49,7 +50,7 @@ class CommandDispatcher(object):
         try:
             model, insulin = self.modelManager.load_model(user)
         except:
-            raise Exception("Error while loading the model")
+            raise InternalError("Error while loading the model", status_code=500)
         res = self.modelManager.evaluate_model(model, user)
         res.append(insulin)
         return res

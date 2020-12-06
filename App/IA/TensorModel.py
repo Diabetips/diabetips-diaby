@@ -75,5 +75,5 @@ class TensorModel(AModel):
             data = myfile.read()
         return tf.keras.models.load_model(self.usersDirectory + "/" + userData['uid'] + '/model.h5'), json.loads(data)['insulin']
 
-    def evaluate_model(self, model, userData):
+    def evaluate_model(self, model, userData, max_date):
         return model.evaluate(self.test_images,  self.test_labels, verbose=2, steps=10)
