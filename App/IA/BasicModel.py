@@ -2,7 +2,7 @@ from statistics import mean
 
 from App.ClientDiabetipsApi.Pagination import Pagination
 from App.ClientDiabetipsApi.ApiService import ServiceDiabetipsApi
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 from App.Error.InternalError import InternalError
 from App.IA.AModel import AModel
@@ -39,6 +39,7 @@ class BasicModel(AModel):
 
         self.influenceInsulinResitanceFromBMI(user_biometrics)
         self.influenceInsulinResitanceFromSex(user_biometrics)
+        self.influenceInsulinResitanceFromAge(user_biometrics)
 
         insulin_from_meals = self.getInsulinFromMeals(user_id, page)
         insulin_from_insulin = self.getInsulinFromInsulin(user_id, page)
@@ -64,7 +65,7 @@ class BasicModel(AModel):
         max_date = page.end
         insulin_list = self.backApiService.insulin.get_all(user_id, page).json()
         insulin_total = sum(map(lambda insulin: float(0 if insulin['type'] == 'slow' else int(insulin['quantity']) * (
-                    (max_date - min_date) / (self.parseDate(insulin['time']).timestamp() - min_date))), insulin_list))
+                (max_date - min_date) / (self.parseDate(insulin['time']).timestamp() - min_date))), insulin_list))
         return insulin_total
 
     def getInsulinFromMeals(self, user_id, page):
@@ -105,9 +106,27 @@ class BasicModel(AModel):
             influence = (1 - (bmi / 40) + 0.5)
         self.gramOfSugarPerInsulinUnit *= influence
 
+    def influenceInsulinResitanceFromAge(self, user_biometrics):
+        age = self.calculate_age(user_biometrics['date_of_birth'])
+        if age <= 0:
+            return
+        if age > 80:
+            influence = 0.5
+        else:
+            influence = (1 - (age / 80) + 0.5)
+        self.gramOfSugarPerInsulinUnit *= influence
+
     def influenceInsulinResitanceFromSex(self, user_biometrics):
         if 'female' in user_biometrics['sex']:
             self.gramOfSugarPerInsulinUnit *= 1.1
+
+    def calculate_age(self, born):
+        try:
+            born = datetime.strptime(born, '%Y-%m-%d')
+        except:
+            return
+        today = date.today()
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
     def getBMI(self, user_biometrics):
         if user_biometrics['height'] == 0 or user_biometrics['height'] is None:
