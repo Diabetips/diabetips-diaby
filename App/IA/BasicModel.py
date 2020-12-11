@@ -38,6 +38,7 @@ class BasicModel(AModel):
             raise InternalError('Missing user biometrics informations', status_code=404)
 
         self.influenceInsulinResitanceFromBMI(user_biometrics)
+        self.influenceInsulinResitanceFromSex(user_biometrics)
 
         insulin_from_meals = self.getInsulinFromMeals(user_id, page)
         insulin_from_insulin = self.getInsulinFromInsulin(user_id, page)
@@ -103,6 +104,10 @@ class BasicModel(AModel):
         else:
             influence = (1 - (bmi / 40) + 0.5)
         self.gramOfSugarPerInsulinUnit *= influence
+
+    def influenceInsulinResitanceFromSex(self, user_biometrics):
+        if 'female' in user_biometrics['sex']:
+            self.gramOfSugarPerInsulinUnit *= 1.1
 
     def getBMI(self, user_biometrics):
         if user_biometrics['height'] == 0 or user_biometrics['height'] is None:
