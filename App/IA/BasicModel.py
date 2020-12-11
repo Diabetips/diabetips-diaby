@@ -2,7 +2,7 @@ from statistics import mean
 
 from App.ClientDiabetipsApi.Pagination import Pagination
 from App.ClientDiabetipsApi.ApiService import ServiceDiabetipsApi
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 from App.Error.InternalError import InternalError
 from App.IA.AModel import AModel
@@ -26,16 +26,24 @@ class BasicModel(AModel):
         return None
 
     def evaluate_model(self, model, user_data, max_date):
+        self.gramOfSugarPerInsulinUnit = 15
         user_id = user_data
         min_date, max_date = self.getDateInterval(max_date)
         page = Pagination(100, 1, start=min_date, end=max_date)
         user = self.backApiService.user.get(user_id, page)
         if user.status_code >= 300:
-            raise InternalError(user.response, status_code=user.status_code)
+            raise InternalError("No user found", status_code=user.status_code)
+        user_biometrics = self.backApiService.biometrics.get_all(user_id, page).json()
+        if user_biometrics is None:
+            raise InternalError('Missing user biometrics informations', status_code=404)
+
+        self.influenceInsulinResitanceFromBMI(user_biometrics)
+        self.influenceInsulinResitanceFromSex(user_biometrics)
+        self.influenceInsulinResitanceFromAge(user_biometrics)
 
         insulin_from_meals = self.getInsulinFromMeals(user_id, page)
         insulin_from_insulin = self.getInsulinFromInsulin(user_id, page)
-        insulin_from_blood_sugar = self.getInsulinFromBloodSugar(user_id, page)
+        insulin_from_blood_sugar = self.getInsulinFromBloodSugar(user_biometrics, user_id, page)
 
         insulin_res = insulin_from_meals + insulin_from_blood_sugar - insulin_from_insulin
         if insulin_res < 0:
@@ -57,7 +65,7 @@ class BasicModel(AModel):
         max_date = page.end
         insulin_list = self.backApiService.insulin.get_all(user_id, page).json()
         insulin_total = sum(map(lambda insulin: float(0 if insulin['type'] == 'slow' else int(insulin['quantity']) * (
-                    (max_date - min_date) / (self.parseDate(insulin['time']).timestamp() - min_date))), insulin_list))
+                (max_date - min_date) / (self.parseDate(insulin['time']).timestamp() - min_date))), insulin_list))
         return insulin_total
 
     def getInsulinFromMeals(self, user_id, page):
@@ -69,14 +77,10 @@ class BasicModel(AModel):
         page.end -= 60 * 20
         return insulin_total
 
-    def getInsulinFromBloodSugar(self, user_id, page):
+    def getInsulinFromBloodSugar(self, user_biometrics, user_id, page):
         range_in_minute = 20
         page.start = page.end - range_in_minute * 60
         user_glucose_list = self.backApiService.blood_glucose.get_all(user_id, page).json()
-
-        user_biometrics = self.backApiService.biometrics.get_all(user_id, page).json()
-        if user_biometrics is None:
-            raise InternalError('Missing user biometrics informations', status_code=404)
         if user_biometrics['hypoglycemia'] == 0 or user_biometrics['hypoglycemia'] is None:
             raise InternalError('Missing hypoglycemia limit', status_code=404)
         if user_biometrics['hyperglycemia'] == 0 or user_biometrics['hyperglycemia'] is None:
@@ -91,6 +95,45 @@ class BasicModel(AModel):
         if average_blood_sugar >= user_biometrics['hyperglycemia']:
             return (average_blood_sugar - user_biometrics['hyperglycemia']) / self.gramOfSugarPerInsulinUnit
         return 0
+
+    def influenceInsulinResitanceFromBMI(self, user_biometrics):
+        bmi = self.getBMI(user_biometrics)
+        if bmi <= 0:
+            return
+        if bmi > 40:
+            influence = 0.5
+        else:
+            influence = (1 - (bmi / 40) + 0.5)
+        self.gramOfSugarPerInsulinUnit *= influence
+
+    def influenceInsulinResitanceFromAge(self, user_biometrics):
+        age = self.calculate_age(user_biometrics['date_of_birth'])
+        if age <= 0:
+            return
+        if age > 80:
+            influence = 0.5
+        else:
+            influence = (1 - (age / 80) + 0.5)
+        self.gramOfSugarPerInsulinUnit *= influence
+
+    def influenceInsulinResitanceFromSex(self, user_biometrics):
+        if 'female' in user_biometrics['sex']:
+            self.gramOfSugarPerInsulinUnit *= 1.1
+
+    def calculate_age(self, born):
+        try:
+            born = datetime.strptime(born, '%Y-%m-%d')
+        except:
+            return
+        today = date.today()
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+    def getBMI(self, user_biometrics):
+        if user_biometrics['height'] == 0 or user_biometrics['height'] is None:
+            return 0
+        if user_biometrics['mass'] == 0 or user_biometrics['mass'] is None:
+            return 0
+        return user_biometrics["mass"] / pow(user_biometrics["height"] / 100, 2)
 
     @staticmethod
     def parseDate(dateAsString):
